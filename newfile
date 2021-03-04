@@ -1,29 +1,29 @@
-New file in central master
 
-resource "azurerm_kubernetes_cluster" "kubernetes_cluster" {
+resource "azurerm_kubernetes_cluster" "aks_cluster" {
 
 lifecycle {
-    ignore_changes = [ "agent_pool_profile.0.count" ]
+    ignore_changes = [ "default_node_pool.0.node_count" ]
   }
 
-  name                    = var.cluster_name               ###
-  location                = var.location
-  resource_group_name     = var.resource_group_name
-  dns_prefix              = var.dns_prefix
-  kubernetes_version      = var.kubernetes_version
-  private_cluster_enabled = var.private_cluster_enabled
-  sku_tier                = var.sla_sku
+  name                          = var.cluster_name              
+  location                      = var.location
+  resource_group_name           = var.resource_group_name
+  dns_prefix                    = var.dns_prefix
+  kubernetes_version            = var.kubernetes_version
+  private_cluster_enabled       = var.private_cluster_enabled
+  sku_tier                      = var.sla_sku
+  
   default_node_pool {
-    name            = var.worker_node_pool_name     ###length must be between 1 and 12 characters
-    orchestrator_version  = var.kubernetes_version
-    node_count      = var.agent_count
-    enable_auto_scaling = var.enable_auto_scaling
-    max_pods        = var.max_pods
-    vm_size         = var.vm_size
-    os_disk_size_gb = var.os_disk_size_gb
-    vnet_subnet_id  = var.subnet_id
-    node_labels           = var.default_node_pool.labels
-    node_taints           = var.default_node_pool.taints
+    name                        = var.worker_node_pool_name     
+    orchestrator_version        = var.kubernetes_version
+    node_count                  = var.agent_count
+    enable_auto_scaling         = var.enable_auto_scaling
+    max_pods                    = var.max_pods
+    vm_size                     = var.vm_size
+    os_disk_size_gb             = var.os_disk_size_gb
+    vnet_subnet_id              = var.subnet_id
+    node_labels                 = var.default_node_pool.labels
+    node_taints                 = var.default_node_pool.taints
   }
 
 ##  service_principal {
@@ -55,7 +55,7 @@ role_based_access_control {
   linux_profile {
     admin_username = var.admin_username
     ssh_key {
-      key_data = var.ssh_key
+      key_data = var.ssh_public_key
     }
 
   network_profile {
@@ -84,15 +84,15 @@ role_based_access_control {
 
 data "azurerm_container_registry" "mashreq_acr" {
   name                = "myregistry"
-  resource_group_name = "another-rg"
+  resource_group_name = "registry-rg"
 }
 
 
 resource "azurerm_role_assignment" "acrpull_role" {
-  scope                            = azurerm_container_registry.acr.id
+  scope                            = azurerm_container_registry.mashreq_acr.id
   role_definition_name             = "AcrPull"
-  principal_id                     = data.azuread_service_principal.aks_principal.id
-##principal_id                     = azurerm_kubernetes_cluster.aks.kubelet_identity[0].object_id
+  ###principal_id                  = data.azuread_service_principal.aks_principal.id
+  principal_id                     = azurerm_kubernetes_cluster.aks.kubelet_identity[0].object_id
   skip_service_principal_aad_check = true
 }
 
@@ -110,8 +110,8 @@ resource "azurerm_role_assignment" "kube_admin_role" {
 resource "azurerm_role_assignment" "MashreqAksServer_role" {
   scope                            = azurerm_kubernetes_cluster.kubernetes_cluster
   role_definition_name             = "Contributor"
-  principal_id                     = data.azuread_service_principal.aks_principal.id
-##principal_id                     = azurerm_kubernetes_cluster.aks.identity[0].principal_id
+  ##principal_id                   = data.azuread_service_principal.aks_principal.id
+  principal_id                     = azurerm_kubernetes_cluster.aks.identity[0].principal_id
   skip_service_principal_aad_check = true
 }
 
